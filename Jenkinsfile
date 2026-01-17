@@ -2,62 +2,39 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "JenkinsPracticeApp"
+        AWS_DEFAULT_REGION = "us-west-1"
+        BUCKET_NAME = "jenkins-practice-${env.BUILD_NUMBER}"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Create S3 Bucket') {
             steps {
-                echo 'Checking out source code...'
-                checkout scm
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-jenkins-creds'
+                ]]) {
+                    sh '''
+                      aws s3 mb s3://$BUCKET_NAME
+                    '''
+                }
             }
         }
 
-	stage('Testing') {
-	    steps {
-		echo 'I am testing the Production'
-		checkout scm
-	    }
-	}
-
-        stage('Build') {
+        stage('Verify Bucket') {
             steps {
-                echo "Building ${APP_NAME}"
-                sh '''
-                  echo "Simulating build..."
-                  sleep 2
-                '''
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo "Running tests"
-                sh './test.sh'
-            }
-        }
-
-        stage('Package') {
-            steps {
-                echo "Packaging application"
-                sh '''
-                  tar -czf app.tar.gz app.sh
-                '''
+                sh 'aws s3 ls'
             }
         }
     }
 
     post {
         success {
-            echo "Pipeline completed successfully 🎉"
+            echo "✅ S3 bucket created successfully"
         }
         failure {
-            echo "Pipeline failed ❌"
-        }
-        always {
-            echo "Cleaning up workspace"
-            cleanWs()
+            echo "❌ Failed to create S3 bucket"
         }
     }
 }
+
