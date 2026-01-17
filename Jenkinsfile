@@ -14,6 +14,13 @@ pipeline {
             }
         }
 
+	stage('Testing') {
+	    steps {
+		echo 'I am testing the Production'
+		checkout scm
+	    }
+	}
+
         stage('Build') {
             steps {
                 echo "Building ${APP_NAME}"
